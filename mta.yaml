@@ -1,0 +1,148 @@
+_schema-version: "3.1"
+ID: task07
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: task07-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: task07-db
+  - name: uaa_task07
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+  build-parameters:
+    builder: npm
+- name: task07-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: task07-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: task07-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: task07-destination-service
+    parameters:
+      content-target: true
+  - name: task07_html_repo_host
+    parameters:
+      service-key:
+        name: task07_html_repo_host-key
+  - name: uaa_task07
+    parameters:
+      service-key:
+        name: uaa_task07-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: projname_task07_html_repo_host
+          ServiceInstanceName: task07-html5-app-host-service
+          ServiceKeyName: task07_html_repo_host-key
+          sap.cloud.service: projname
+        - Authentication: OAuth2UserTokenExchange
+          Name: projname_uaa_task07
+          ServiceInstanceName: task07-xsuaa-service
+          ServiceKeyName: uaa_task07-key
+          sap.cloud.service: projname
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: task07-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: task07_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - listapp.zip
+      name: listapp
+      target-path: resources/
+    - artifacts:
+      - app1.zip
+      name: app1
+      target-path: resources/
+- name: listapp
+  type: html5
+  path: app/listapp
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: app1
+  type: html5
+  path: app/app1
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: task07-db
+  type:  org.cloudfoundry.existing-service 
+  parameters:
+    service-name: t7
+    # service-plan: hdi-shared
+- name: task07-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          - Authentication: NoAuthentication
+            HTML5.DynamicDestination: true
+            HTML5.ForwardAuthToken: true
+            Name: task07-srv-api
+            ProxyType: Internet
+            Type: HTTP
+            URL: ~{srv-api/srv-url}
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: task07-destination-service
+    service-plan: lite
+  requires:
+  - name: srv-api
+- name: task07_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: task07-html5-app-host-service
+    service-plan: app-host
+- name: uaa_task07
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: task07-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npx cds build --production

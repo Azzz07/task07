@@ -1,0 +1,37 @@
+{
+    "name": "task07",
+    "version": "1.0.0",
+    "description": "A simple CAP project.",
+    "repository": "<Add your repository here>",
+    "license": "UNLICENSED",
+    "private": true,
+    "dependencies": {
+        "@sap/cds": "^7",
+        "express": "^4",
+        "@sap/cds-hana": "^2"
+    },
+    "devDependencies": {
+        "@cap-js/sqlite": "^1",
+        "@sap/cds-dk": "^7",
+        "rimraf": "^3.0.2",
+        "@sap/ux-specification": "UI5-1.120"
+    },
+    "scripts": {
+        "start": "cds-serve",
+        "watch-listapp": "cds watch --open listapp/webapp/index.html?sap-ui-xx-viewCache=false",
+        "undeploy": "cf undeploy task07 --delete-services --delete-service-keys --delete-service-brokers",
+        "build": "rimraf resources mta_archives && mbt build --mtar archive",
+        "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
+        "watch-app1": "cds watch --open app1/webapp/index.html?sap-ui-xx-viewCache=false"
+    },
+    "cds": {
+        "requires": {
+            "db": "hana",
+            "auth":"dummy"
+        }
+    },
+    "sapux": [
+        "app/listapp",
+        "app/app1"
+    ]
+}
